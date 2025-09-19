@@ -32,9 +32,27 @@ def get_video_title(status_box, url):
     except Exception as e:
         status_box.insert("end", f"Error fetching title: {e}\n")
         return "Unknown Title"
-    
 
-def download(status_box, url, quality_code="bestvideo+bestaudio/best"):
+def check_for_updates(status_box):
+    """Checks for updates to yt-dlp."""
+    try:
+        result = subprocess.run(
+            ["yt-dlp", "-U"],
+            capture_output=True,
+            text=True,
+            encoding='utf-8'
+        )
+        if "yt-dlp is up to date" not in result.stdout:
+            curr_version = result.stdout.split(" ")[2]
+            latest_version = result.stdout.split(" ")[-1].strip()
+            status_box.insert("end", "\n--- Update Available! ---\n")
+            status_box.insert("end", f"Current version: {curr_version}, Latest version: {latest_version}\n")
+            status_box.see("end") # Auto-scroll
+    except Exception as e:
+        status_box.insert("end", f"Error checking for updates: {e}\n")
+        status_box.see("end") # Auto-scroll
+
+def download(status_box, url, audio_only=False, quality_code="bestvideo+bestaudio/best"):
     """Constructs and runs the yt-dlp command."""
     # Command to download the best quality video and audio combined
     command = [
@@ -44,6 +62,9 @@ def download(status_box, url, quality_code="bestvideo+bestaudio/best"):
         "-o", # Output template
         "%(title)s.%(ext)s"
     ]
+
+    if audio_only:
+        command.append("-x")  # Extract audio only
 
     # Run the command using subprocess
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
